@@ -1,0 +1,60 @@
+--- # Я выбрал простой nginx 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: "2"  # Начальная аллокация
+              memory: "128Mi"
+            requests:
+              cpu: "0.1"  # Снижаем до 0.1
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+    app: nginx
+  externalIPs:
+    - 192.168.0.140
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http # Показываем nginx в мир
+---
+apiVersion: autoscaling/v2 # Автоскейлер ресурсов, восемь реплик при повышенной нагрузке восемь реплик должно хватить
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nginx
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+  minReplicas: 4
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
